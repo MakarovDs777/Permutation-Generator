@@ -1,0 +1,270 @@
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Генератор перестановок символов с поиском</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #permutations {
+            width: 100%;
+            height: 300px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: scroll;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        #countDisplay {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        #randomPermutation {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<h2>Генератор перестановок 2</h2>
+<label>Введите символы:</label><br>
+<input type="text" id="charInput" style="width: 300px;" placeholder="например, abc" value="abc"><br><br>
+
+<button onclick="generatePermutationsNoRepeats()">Без повторов</button>
+<button onclick="generatePermutationsWithRepeats()">С повторами</button>
+<button onclick="generateAllPermutationsCombined()">С повторами и без</button>
+
+<div id="countDisplay"></div>
+
+<div style="margin-top:20px;">
+    <label>Поиск перестановки по символам:</label><br>
+    <input type="text" id="searchPermutation" style="width: 300px;" placeholder="Введите перестановку для поиска">
+    <button onclick="searchPermutationByChars()">Найти</button>
+</div>
+
+<div style="margin-top:20px;">
+    <label>Поиск перестановки по номеру:</label><br>
+    <input type="number" id="searchPermutationNumber" style="width: 300px;" placeholder="Введите номер перестановки">
+    <button onclick="searchPermutationByNumber()">Найти</button>
+</div>
+
+<div id="searchResult" style="margin-top:10px; font-weight: bold;"></div>
+
+<div id="permutations"></div>
+
+<!-- Новое поле для ввода текста, который добавится в конце каждой строки -->
+<div style="margin-top:20px;">
+    <label>Дополнительный текст, добавляемый в конце каждой строки:</label><br>
+    <input type="text" id="additionalText" style="width: 300px;" placeholder="например, END" value="END">
+    <button onclick="displayResults()">Применить текст</button>
+</div>
+
+<div id="randomPermutation" style="margin-top:20px;">
+    <label>Диапазон случайной генерации (от):</label>
+    <input type="number" id="randomRangeMin" style="width: 100px;" placeholder="Мин. номер">
+    <label>до:</label>
+    <input type="number" id="randomRangeMax" style="width: 100px;" placeholder="Макс. номер"><br><br>
+    <button onclick="displayRandomPermutation()">Случайная перестановка</button><br>
+    <span id="randomPermutationResult"></span><br>
+    <label>Скорость автопереключения (сек):</label>
+    <input type="number" id="autoSwitchSpeed" style="width: 100px;" value="1" min="0.1" step="0.1">
+    <button onclick="toggleAutoSwitch()">Автопереключение</button>
+</div>
+
+<script>
+    let currentResultsNoRepeats = [];
+    let currentResultsWithRepeats = [];
+    let currentResults = [];
+    let autoSwitchInterval;
+
+    function generatePermutationsNoRepeats() {
+        const inputStr = document.getElementById('charInput').value.trim();
+        if (inputStr.length === 0) {
+            alert('Пожалуйста, введите символы.');
+            return;
+        }
+        const chars = Array.from(new Set(inputStr.split('')));
+        currentResultsNoRepeats = [];
+
+        function permute(arr, m = []) {
+            if (arr.length === 0) {
+                currentResultsNoRepeats.push(m.join(''));
+            } else {
+                for (let i = 0; i < arr.length; i++) {
+                    const curr = arr.slice();
+                    curr.splice(i, 1);
+                    permute(curr, m.concat(arr[i]));
+                }
+            }
+        }
+
+        permute(chars);
+        currentResults = currentResultsNoRepeats;
+        displayResults();
+    }
+
+    function generatePermutationsWithRepeats() {
+        const inputStr = document.getElementById('charInput').value.trim();
+        if (inputStr.length === 0) {
+            alert('Пожалуйста, введите символы.');
+            return;
+        }
+        const chars = inputStr.split('');
+        currentResultsWithRepeats = [];
+        const length = chars.length;
+
+        function permuteWithRepeats(current = []) {
+            if (current.length === length) {
+                currentResultsWithRepeats.push(current.join(''));
+            } else {
+                for (let ch of chars) {
+                    permuteWithRepeats(current.concat(ch));
+                }
+            }
+        }
+
+        permuteWithRepeats();
+        currentResults = currentResultsWithRepeats;
+        displayResults();
+    }
+
+    function generateAllPermutationsCombined() {
+        const inputStr = document.getElementById('charInput').value.trim();
+        if (inputStr.length === 0) {
+            alert('Пожалуйста, введите символы.');
+            return;
+        }
+        const charsNoRepeats = Array.from(new Set(inputStr.split('')));
+        currentResultsNoRepeats = [];
+
+        function permuteNoRepeats(arr, m = []) {
+            if (arr.length === 0) {
+                currentResultsNoRepeats.push(m.join(''));
+            } else {
+                for (let i = 0; i < arr.length; i++) {
+                    const curr = arr.slice();
+                    curr.splice(i, 1);
+                    permuteNoRepeats(curr, m.concat(arr[i]));
+                }
+            }
+        }
+
+        permuteNoRepeats(charsNoRepeats);
+        const charsWithRepeats = inputStr.split('');
+        currentResultsWithRepeats = [];
+        const length = charsWithRepeats.length;
+
+        function permuteWithRepeats(current = []) {
+            if (current.length === length) {
+                currentResultsWithRepeats.push(current.join(''));
+            } else {
+                for (let ch of charsWithRepeats) {
+                    permuteWithRepeats(current.concat(ch));
+                }
+            }
+        }
+
+        permuteWithRepeats();
+        currentResults = currentResultsNoRepeats.concat(currentResultsWithRepeats);
+        displayResults();
+    }
+
+    function displayResults() {
+        const additionalText = document.getElementById('additionalText').value.trim();
+        const resultsWithAdditional = currentResults.map(str => {
+            return str + (additionalText ? additionalText : '');
+        });
+        document.getElementById('permutations').innerText = resultsWithAdditional.join('\n');
+        document.getElementById('countDisplay').innerText = `Всего перестановок: ${currentResults.length}`;
+        document.getElementById('searchResult').innerText = '';
+    }
+
+    function searchPermutationByChars() {
+        const searchStr = document.getElementById('searchPermutation').value.trim();
+        if (searchStr.length === 0) {
+            alert('Введите перестановку для поиска.');
+            return;
+        }
+        const index = currentResults.indexOf(searchStr);
+        if (index !== -1) {
+            document.getElementById('searchResult').innerText = `Перестановка найдена! Номер: ${index + 1}`;
+        } else {
+            document.getElementById('searchResult').innerText = 'Перестановка не найдена.';
+        }
+    }
+
+    function searchPermutationByNumber() {
+        const searchNumber = parseInt(document.getElementById('searchPermutationNumber').value);
+        if (isNaN(searchNumber)) {
+            alert('Введите корректный номер перестановки.');
+            return;
+        }
+
+        if (searchNumber < 1 || searchNumber > currentResults.length) {
+            document.getElementById('searchResult').innerText = 'Перестановка с таким номером не найдена.';
+            return;
+        }
+
+        document.getElementById('searchResult').innerText = `Перестановка под номером ${searchNumber}: ${currentResults[searchNumber - 1]}`;
+    }
+
+    function displayRandomPermutation() {
+        if (currentResults.length === 0) {
+            alert('Сначала сгенерируйте перестановки.');
+            return;
+        }
+
+        const minRange = parseInt(document.getElementById('randomRangeMin').value);
+        const maxRange = parseInt(document.getElementById('randomRangeMax').value);
+
+        let min = 1; // Default minimum
+        let max = currentResults.length; // Default maximum
+
+        if (!isNaN(minRange) && !isNaN(maxRange)) {
+            min = Math.max(1, Math.min(minRange, maxRange)); // Ensure min is within bounds and min <= max
+            max = Math.min(currentResults.length, Math.max(minRange, maxRange)); // Ensure max is within bounds and max >= min
+        } else if (!isNaN(minRange)) {
+            min = Math.max(1, minRange);
+            max = currentResults.length;
+        }
+        else if (!isNaN(maxRange)) {
+            min = 1;
+             max = Math.min(currentResults.length, maxRange);
+        }
+        if (min > max) {
+           alert("Минимальный номер диапазона больше максимального.");
+           return;
+        }
+
+        const randomIndex = Math.floor(Math.random() * (max - min + 1)) + min - 1; // generate number between min and max, inclusive
+        const permutation = currentResults[randomIndex];
+        document.getElementById('randomPermutationResult').innerText = `Случайная перестановка: ${permutation} (Номер: ${randomIndex + 1})`;
+    }
+
+    function toggleAutoSwitch() {
+        const autoSwitchSpeed = parseFloat(document.getElementById('autoSwitchSpeed').value);
+
+        if (isNaN(autoSwitchSpeed) || autoSwitchSpeed <= 0) {
+            alert('Введите корректную скорость автопереключения (больше 0).');
+            return;
+        }
+
+        if (autoSwitchInterval) {
+            clearInterval(autoSwitchInterval);
+            autoSwitchInterval = null;
+            document.querySelector('#randomPermutation button[onclick="toggleAutoSwitch()"]').innerText = "Автопереключение";
+        } else {
+            autoSwitchInterval = setInterval(displayRandomPermutation, autoSwitchSpeed * 1000);
+            document.querySelector('#randomPermutation button[onclick="toggleAutoSwitch()"]').innerText = "Остановить автопереключение";
+            displayRandomPermutation(); // Show first permutation immediately
+        }
+    }
+</script>
+</body>
+</html>
