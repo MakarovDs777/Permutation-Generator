@@ -1,0 +1,365 @@
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Генератор перестановок</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+  .permutations-container {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    padding: 10px;
+  }
+  #permutations, #permutations2, #mainPermutations {
+    width: 100%;
+    height: 200px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: monospace;
+  }
+  #countDisplay, #countDisplay2, #countDisplayMain {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<h2>Генератор перестановок</h2>
+
+<!-- Первый набор -->
+<div class="permutations-container" id="set1">
+  <h3>Первый набор</h3>
+  <label>Введите символы:</label><br>
+  <input type="text" id="charInput" style="width: 300px;" placeholder="например, abc" value="abc"><br><br>
+  <button onclick="generatePermutationsNoRepeats(1)">Без повторов</button>
+  <button onclick="generatePermutationsWithRepeats(1)">Сповторами</button>
+  <button onclick="generateAllPermutationsCombined(1)">С повторам и без</button>
+  <div id="countDisplay"></div>
+  
+  <div style="margin-top:20px;">
+    <label>Поиск перестановки по символам:</label><br>
+    <input type="text" id="searchPermutation" style="width: 300px;" placeholder="Введите перестановку для поиска">
+    <button onclick="searchPermutationByChars(1)">Найти</button>
+  </div>
+  
+  <div style="margin-top:20px;">
+    <label>Поиск перестановки по номеру:</label><br>
+    <input type="number" id="searchPermutationNumber" style="width: 300px;" placeholder="Введите номер перестановки">
+    <button onclick="searchPermutationByNumber(1)">Найти</button>
+  </div>
+  
+  <div id="searchResult" style="margin-top:10px; font-weight: bold;"></div>
+  <h4>Перестановки:</h4>
+  <div id="permutations"></div>
+  
+  <!-- Текст для добавления -->
+  <div style="margin-top:20px;">
+    <label>Текст, добавляемый в конец каждой перестановки (для этого набора):</label><br>
+    <input type="text" id="additionalText1" style="width: 300px;" placeholder="например, END" value="">
+  </div>
+</div>
+
+<!-- Второй набор -->
+<div class="permutations-container" id="set2">
+  <h3>Второй набор</h3>
+  <label>Введите символы:</label><br>
+  <input type="text" id="charInput2" style="width: 300px;" placeholder="например, xyz" value="xyz"><br><br>
+  <button onclick="generatePermutationsNoRepeats(2)">Без повторов</button>
+  <button onclick="generatePermutationsWithRepeats(2)">С повторами</button>
+  <button onclick="generateAllPermutationsCombined(2)">С повторам и без</button>
+  <div id="countDisplay2"></div>
+  
+  <div style="margin-top:20px;">
+    <label>Поиск перестановки по символам:</label><br>
+    <input type="text" id="searchPermutation2" style="width: 300px;" placeholder="Введите перестановку для поиска">
+    <button onclick="searchPermutationByChars(2)">Найти</button>
+  </div>
+  
+  <div style="margin-top:20px;">
+    <label>Поиск перестановки по номеру:</label><br>
+    <input type="number" id="searchPermutationNumber2" style="width: 300px;" placeholder="Введите номер перестановки">
+    <button onclick="searchPermutationByNumber(2)">Найти</button>
+  </div>
+  
+  <div id="searchResult2" style="margin-top:10px; font-weight: bold;"></div>
+  <h4>Перестановки:</h4>
+  <div id="permutations2"></div>
+  
+  <!-- Текст для добавления -->
+  <div style="margin-top:20px;">
+    <label>Текст, добавляемый в конец каждой перестановки (для этого набора):</label><br>
+    <input type="text" id="additionalText2" style="width: 300px;" placeholder="например, END2" value="">
+  </div>
+</div>
+
+<!-- Главный набор -->
+<div class="permutations-container" id="mainSet">
+  <h3>Главный набор</h3>
+  <div style="margin-top:20px;">
+    <label>Количество случайных перестановок из первого набора:</label>
+    <input type="number" id="mainCount1" style="width: 80px;" min="1" value="5">
+    <label>из второго набора:</label>
+    <input type="number" id="mainCount2" style="width: 80px;" min="1" value="5">
+    <button onclick="generateMainRandomPermutations()">Обновить</button>
+  </div>
+  
+  <!-- Кнопки для включения/выключения добавления текста -->
+  <div style="margin-top:20px;">
+    <button id="toggleAddTextOn" onclick="toggleAddText(true)">Включить добавление текста</button>
+    <button id="toggleAddTextOff" onclick="toggleAddText(false)">Выключить добавление текста</button>
+  </div>
+  
+  <!-- Табло для отображения случайных перестановок -->
+  <div style="margin-top:20px;">
+    <h4>Случайные перестановки из обоих наборов</h4>
+    <div id="mainPermutations"></div>
+  </div>
+</div>
+
+<script>
+  // Объявление глобальных переменных
+  const results = {
+    1: {
+      noRepeats: [],
+      withRepeats: [],
+      combined: [],
+      current: [],
+      autoSwitchInterval: null
+    },
+    2: {
+      noRepeats: [],
+      withRepeats: [],
+      combined: [],
+      current: [],
+      autoSwitchInterval: null
+    }
+  };
+
+  let addTextMode = false; // Включение режима добавления текста для главного набора
+
+  // =================== ФУНКЦИИ ГЕНЕРАЦИИ ===================
+
+  function generatePermutationsNoRepeats(setIndex) {
+    const inputId = setIndex === 1 ? 'charInput' : 'charInput2';
+    const inputStr = document.getElementById(inputId).value.trim();
+    if (!inputStr) {
+      alert('Пожалуйста, введите символы.');
+      return;
+    }
+    const chars = Array.from(new Set(inputStr.split('')));
+    results[setIndex].noRepeats = [];
+    permuteNoRepeats(chars, [], results[setIndex].noRepeats);
+    results[setIndex].current = results[setIndex].noRepeats;
+    displayResults(setIndex);
+  }
+
+  function permuteNoRepeats(arr, path, result) {
+    if (arr.length === 0) {
+      result.push(path.join(''));
+    } else {
+      for (let i = 0; i < arr.length; i++) {
+        const newArr = arr.slice();
+        newArr.splice(i, 1);
+        permuteNoRepeats(newArr, [...path, arr[i]], result);
+      }
+    }
+  }
+
+  function generatePermutationsWithRepeats(setIndex) {
+    const inputId = setIndex === 1 ? 'charInput' : 'charInput2';
+    const inputStr = document.getElementById(inputId).value.trim();
+    if (!inputStr) {
+      alert('Пожалуйста, введите символы.');
+      return;
+    }
+    const chars = inputStr.split('');
+    results[setIndex].withRepeats = [];
+    permuteWithRepeats(chars, [], results[setIndex].withRepeats);
+    results[setIndex].current = results[setIndex].withRepeats;
+    displayResults(setIndex);
+  }
+
+  function permuteWithRepeats(chars, current, result) {
+    if (current.length === chars.length) {
+      result.push(current.join(''));
+    } else {
+      for (const ch of chars) {
+        permuteWithRepeats(chars, [...current, ch], result);
+      }
+    }
+  }
+
+  function generateAllPermutationsCombined(setIndex) {
+    const inputId = setIndex === 1 ? 'charInput' : 'charInput2';
+    const inputStr = document.getElementById(inputId).value.trim();
+    if (!inputStr) {
+      alert('Пожалуйста, введите символы.');
+      return;
+    }
+    const charsNoRepeats = Array.from(new Set(inputStr.split('')));
+    const charsWithRepeats = inputStr.split('');
+    results[setIndex].noRepeats = [];
+    results[setIndex].withRepeats = [];
+
+    permuteNoRepeats(charsNoRepeats, [], results[setIndex].noRepeats);
+    permuteWithRepeats(charsWithRepeats, [], results[setIndex].withRepeats);
+
+    results[setIndex].current = results[setIndex].noRepeats.concat(results[setIndex].withRepeats);
+    displayResults(setIndex);
+  }
+
+  // =================== ВЫВОД И ПОИСК ===================
+
+  function displayResults(setIndex) {
+    const data = results[setIndex];
+    const list = data.current;
+    const permutationsDiv = document.getElementById(setIndex === 1 ? 'permutations' : 'permutations2');
+    const countDiv = document.getElementById(setIndex === 1 ? 'countDisplay' : 'countDisplay2');
+
+    // В зависимости от режима добавляем текст
+    let additionalText = '';
+    if (setIndex === 1) {
+      additionalText = document.getElementById('additionalText1').value.trim();
+    } else if (setIndex === 2) {
+      additionalText = document.getElementById('additionalText2').value.trim();
+    }
+
+    const resultsWithAdditional = list.map(str => str + (addTextMode ? additionalText : ''));
+    permutationsDiv.innerText = resultsWithAdditional.join('\n');
+    countDiv.innerText = `Всего перестановок: ${list.length}`;
+  }
+
+  function searchPermutationByChars(setIndex) {
+    const searchStr = document.getElementById(setIndex === 1 ? 'searchPermutation' : 'searchPermutation2').value.trim();
+    if (!searchStr) {
+      alert('Введите перестановку для поиска.');
+      return;
+    }
+    const list = results[setIndex].current;
+    const index = list.indexOf(searchStr);
+    const resultDiv = document.getElementById(setIndex === 1 ? 'searchResult' : 'searchResult2');
+    if (index !== -1) {
+      resultDiv.innerText = `Перестановка найдена! Номер: ${index + 1}`;
+    } else {
+      resultDiv.innerText = 'Перестановка не найдена.';
+    }
+  }
+
+  function searchPermutationByNumber(setIndex) {
+    const number = parseInt(document.getElementById(setIndex === 1 ? 'searchPermutationNumber' : 'searchPermutationNumber2').value);
+    const list = results[setIndex].current;
+    const resultDiv = document.getElementById(setIndex === 1 ? 'searchResult' : 'searchResult2');
+
+    if (isNaN(number) || number < 1 || number > list.length) {
+      alert('Некорректный номер.');
+      return;
+    }
+    resultDiv.innerText = `Перестановка под номером ${number}: ${list[number - 1]}`;
+  }
+
+  function displayRandomPermutation(setIndex) {
+    const min = parseInt(document.getElementById(`randomRangeMin${setIndex}`).value);
+    const max = parseInt(document.getElementById(`randomRangeMax${setIndex}`).value);
+    if (isNaN(min) || isNaN(max) || min > max) {
+      alert('Некорректный диапазон.');
+      return;
+    }
+    const list = results[setIndex].current;
+    if (list.length === 0) {
+      alert('Сначала сгенерируйте перестановки для этого набора.');
+      return;
+    }
+    const randIndex = Math.floor(Math.random() * (max - min + 1)) + min - 1;
+    if (randIndex < 0 || randIndex >= list.length) {
+      alert('Номер вне диапазона.');
+      return;
+    }
+    document.getElementById(`randomPermutationResult${setIndex}`).innerText = list[randIndex];
+  }
+
+  function toggleAutoSwitch(setIndex) {
+    const speed = parseFloat(document.getElementById(`autoSwitchSpeed${setIndex}`).value);
+    if (results[setIndex].autoSwitchInterval) {
+      clearInterval(results[setIndex].autoSwitchInterval);
+      results[setIndex].autoSwitchInterval = null;
+    } else {
+      results[setIndex].autoSwitchInterval = setInterval(() => {
+        displayRandomPermutation(setIndex);
+      }, speed * 1000);
+    }
+  }
+
+  // =================== ФУНКЦИИ ГЛАВНОГО НАБОРА ===================
+
+  function toggleAddText(enable) {
+    addTextMode = enable;
+    document.getElementById('toggleAddTextOn').disabled = enable;
+    document.getElementById('toggleAddTextOff').disabled = !enable;
+    generateMainRandomPermutations();
+  }
+
+  function generateMainRandomPermutations() {
+    const count1 = parseInt(document.getElementById('mainCount1').value);
+    const count2 = parseInt(document.getElementById('mainCount2').value);
+    if (isNaN(count1) || count1 < 1 || isNaN(count2) || count2 < 1) {
+      alert('Введите корректное количество.');
+      return;
+    }
+
+    const list1 = results[1].current;
+    const list2 = results[2].current;
+
+    if (list1.length === 0 || list2.length === 0) {
+      alert('Генерируйте сначала оба набора.');
+      return;
+    }
+
+    const mainPermsDiv = document.getElementById('mainPermutations');
+    mainPermsDiv.innerText = '';
+
+    const selectedFromSet1 = getRandomSamples(list1, count1);
+    const selectedFromSet2 = getRandomSamples(list2, count2);
+
+    let combined = [...selectedFromSet1, ...selectedFromSet2];
+
+    // Добавляем текст, активный для каждого набора
+    const text1 = document.getElementById('additionalText1').value.trim();
+    const text2 = document.getElementById('additionalText2').value.trim();
+
+    combined = combined.map(str => {
+      let resStr = str;
+      if (addTextMode) {
+        // В режиме добавления текста, добавляем активный текст каждого набора
+        if (results[1].current.includes(str) && text1) resStr += text1;
+        if (results[2].current.includes(str) && text2) resStr += text2;
+      }
+      return resStr;
+    });
+
+    mainPermsDiv.innerText = combined.join('\n');
+  }
+
+  function getRandomSamples(array, count) {
+    const result = [];
+    const usedIndices = new Set();
+    const maxAttempts = array.length * 2;
+    let attempts = 0;
+    while (result.length < count && attempts < maxAttempts) {
+      const index = Math.floor(Math.random() * array.length);
+      if (!usedIndices.has(index)) {
+        usedIndices.add(index);
+        result.push(array[index]);
+      }
+      attempts++;
+    }
+    return result;
+  }
+</script>
+</body>
+</html>
